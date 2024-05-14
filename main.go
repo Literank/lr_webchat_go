@@ -9,6 +9,7 @@ import (
 )
 
 type User = map[string]interface{}
+type Data = User
 
 const port = 4000
 
@@ -42,6 +43,18 @@ func main() {
 				items = append(items, []interface{}{k, v})
 			}
 			io.Sockets().Emit("contacts", items)
+		})
+
+		client.On("chat", func(args ...any) {
+			data, ok := args[0].(Data)
+			if !ok {
+				return
+			}
+			to, ok := data["to"].(string)
+			if !ok {
+				return
+			}
+			io.Sockets().To(socket.Room(to)).Emit("chat", data)
 		})
 	})
 
