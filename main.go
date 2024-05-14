@@ -76,6 +76,18 @@ func main() {
 			io.Sockets().To(socket.Room(roomId)).Emit("create-group", data)
 			fmt.Printf("Room %s => %s created\n", roomId, roomName)
 		})
+
+		client.On("group-chat", func(args ...any) {
+			data, ok := args[0].(Data)
+			if !ok {
+				return
+			}
+			roomId, ok := data["room"].(string)
+			if !ok {
+				return
+			}
+			io.Sockets().To(socket.Room(roomId)).Except(socket.Room(client.Id())).Emit("group-chat", data)
+		})
 	})
 
 	http.Handle("/socket.io/", io.ServeHandler(nil))
