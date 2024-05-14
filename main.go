@@ -56,6 +56,26 @@ func main() {
 			}
 			io.Sockets().To(socket.Room(to)).Emit("chat", data)
 		})
+
+		// Create Room
+		client.On("create-group", func(args ...any) {
+			data, ok := args[0].(Data)
+			if !ok {
+				return
+			}
+			socketIds := data["sids"].([]interface{})
+			var individualRooms []socket.Room
+			for _, socketId := range socketIds {
+				individualRooms = append(individualRooms, socket.Room(socketId.(string)))
+			}
+			roomName := data["name"].(string)
+			roomId := data["id"].(string)
+			// Join Room
+			io.Sockets().In(individualRooms...).SocketsJoin(socket.Room(roomId))
+			// Broadcast to all participants
+			io.Sockets().To(socket.Room(roomId)).Emit("create-group", data)
+			fmt.Printf("Room %s => %s created\n", roomId, roomName)
+		})
 	})
 
 	http.Handle("/socket.io/", io.ServeHandler(nil))
