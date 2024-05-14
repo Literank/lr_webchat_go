@@ -8,6 +8,8 @@ import (
 	"github.com/zishang520/socket.io/v2/socket"
 )
 
+type User = map[string]interface{}
+
 const port = 4000
 
 func main() {
@@ -15,10 +17,32 @@ func main() {
 	opts := &socket.ServerOptions{}
 	opts.SetCors(&types.Cors{Origin: "*"})
 
+	users := make(map[string]User)
+
 	io := socket.NewServer(nil, opts)
 	io.On("connection", func(clients ...any) {
 		client := clients[0].(*socket.Socket)
 		fmt.Println("A user connected:", client.Id())
+
+		client.On("user-join", func(args ...any) {
+			user, ok := args[0].(User)
+			if !ok {
+				return
+			}
+			if _, ok := user["name"]; !ok {
+				return
+			}
+			id := string(client.Id())
+			fmt.Printf("User %s => %s %s joined\n", id, user["emoji"], user["name"])
+			user["sid"] = id
+			users[id] = user
+			// Broadcast to all connected clients
+			var items [][]interface{}
+			for k, v := range users {
+				items = append(items, []interface{}{k, v})
+			}
+			io.Sockets().Emit("contacts", items)
+		})
 	})
 
 	http.Handle("/socket.io/", io.ServeHandler(nil))
